@@ -2,9 +2,10 @@
 Author: Jun Zhu <zhujun981661@gmail.com>
 """
 import dash
-import flask
+from flask import Flask, render_template
 from flask_caching import Cache
 from werkzeug.wsgi import DispatcherMiddleware
+from werkzeug.serving import run_simple
 
 
 class Manager:
@@ -19,7 +20,7 @@ class Manager:
         return cls.__instance
 
     def __init__(self):
-        self._server = flask.Flask(__name__)
+        self._server = Flask(__name__)
 
         self._cache = Cache(self._server, config={
             'CACHE_TYPE': 'filesystem',
@@ -73,3 +74,6 @@ class Manager:
         return DispatcherMiddleware(self._server, {
             pathname: app.server for (pathname, app) in self.__apps.items()
         })
+
+    def run_simple(self, hostname='localhost', port=8050):
+        run_simple(hostname, port, self.application)
