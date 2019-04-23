@@ -2,10 +2,9 @@
 Author: Jun Zhu <zhujun981661@gmail.com>
 """
 import dash
-from flask import Flask, render_template
-from flask_caching import Cache
-from werkzeug.wsgi import DispatcherMiddleware
-from werkzeug.serving import run_simple
+from flask import Flask
+
+from .dash_app import DashApp
 
 
 class Manager:
@@ -22,58 +21,47 @@ class Manager:
     def __init__(self):
         self._server = Flask(__name__)
 
-        self._cache = Cache(self._server, config={
-            'CACHE_TYPE': 'filesystem',
-            'CACHE_DIR': 'cache-directory',
-            'CACHE_THRESHOLD': 100,
-        })
-
     @property
-    def flask_server(self):
+    def server(self):
         return self._server
 
-    @property
-    def cache(self):
-        return self._cache
+    def new_app(self, name, url_base_pathname=None):
+        if url_base_pathname is None:
+            url_base_pathname = name
 
-    def new_dash_app(self, name, requests_pathname=None):
-        if requests_pathname is None:
-            requests_pathname = name
-
-        # requests_pathname must end with '/'
-        if not requests_pathname:
-            requests_pathname = "/"
-            pathname = "/"  # key used in bookkeeping app instance
+        # url_base_pathname must end with '/'
+        if not url_base_pathname:
+            url_base_pathname = "/"
         else:
-            requests_pathname = f"/{requests_pathname}/"
-            pathname = requests_pathname[:-1]  # strip the last "/"
+            url_base_pathname = f"/{url_base_pathname}/"
 
-        app = dash.Dash(name, requests_pathname_prefix=requests_pathname)
+        # There are three "pathname"s:
+        #     url_base_pathname,
+        #     routes_pathname_prefix,
+        #     requests_pathname_prefix
+        #
+        # `requests_pathname_prefix` is the prefix for the AJAX calls that
+        # originate from the client (the web browser) and `routes_pathname_
+        # prefix` is the prefix for the API routes on the backend (this flask
+        # server). `url_base_pathname` will set `requests_pathname_prefix` and
+        # `routes_pathname_prefix` to the same value.
+        app = dash.Dash(name,
+                        server=self._server,
+                        url_base_pathname=url_base_pathname)
 
         app.css.config.serve_locally = True
         app.scripts.config.serve_locally = True
         app.config['suppress_callback_exceptions'] = True
 
-        # bookkeeping app
-        self.__apps[pathname] = app
+        # bookkeeping dash_app
+        self.__apps[url_base_pathname] = DashApp(app, self._server)
 
-        return app
+        return self.__apps[url_base_pathname]
 
-    @property
-    def application(self):
-        """Return an application object.
+    def run(self, hostname='localhost', port=8050):
+        self.run_daq()
+        self._server.run(hostname, port)
 
-        The application object can be run as a WSGI app like so
-        $ gunicorn wsgi:application
-        or passed as an argument to the Werkzeug development server like so
-        $ from werkzeug.serving import run_simple
-        $ run_simple('localhost', 8050, application)
-        """
-        self._cache.clear()
-
-        return DispatcherMiddleware(self._server, {
-            pathname: app.server for (pathname, app) in self.__apps.items()
-        })
-
-    def run_simple(self, hostname='localhost', port=8050):
-        run_simple(hostname, port, self.application)
+    def run_daq(self):
+        for app in self.__apps.values():
+            app.daq.start()
