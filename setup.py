@@ -31,8 +31,9 @@ setup(
     package_data={
     },
     install_requires=[
-        "flask",
-        "flask_caching"
+        "dash>=0.41.0",
+        "flask>=1.0.2",
+        "flask_caching>=1.7.1"
     ],
     extras_require={
         'docs': [
