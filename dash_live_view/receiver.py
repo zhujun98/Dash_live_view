@@ -1,20 +1,25 @@
+"""
+Author: Jun Zhu <zhujun981661@gmail.com>
+"""
 import time
 from threading import Thread
 
 
 class ReceiverFactory:
+    """Class Factory which produces receiver instance for different APIs."""
+    # TODO: implement a base class
 
     class EuXFELReceiver(Thread):
-        def __init__(self, data_queue, address):
+        def __init__(self, data_queue, endpoint):
             """Initialization.
 
             :param deque data_queue: a deque to store train data.
-            :param str address: TCP address of the server.
+            :param str endpoint: TCP address of the server.
             """
             super().__init__()
 
             self._queue = data_queue
-            self._address = address
+            self._endpoint = endpoint
 
             self._running = False
 
@@ -24,8 +29,9 @@ class ReceiverFactory:
 
             from karabo_bridge import Client
 
-            with Client(self._address, timeout=1) as client:
-                print(f"Binding to server: {self._address}!")
+            # TODO: make timeout configurable
+            with Client(self._endpoint, timeout=1) as client:
+                print(f"Binding to server: {self._endpoint}\n")
                 while self._running:
                     t0 = time.perf_counter()
                     try:
@@ -41,7 +47,6 @@ class ReceiverFactory:
     @classmethod
     def create(cls, api, *args, **kwargs):
         if api is None:
-            # TODO: assign default api
             raise ValueError("Not understandable api!")
 
         if api.lower() == "euxfel":

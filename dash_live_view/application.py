@@ -4,6 +4,9 @@ Author: Jun Zhu <zhujun981661@gmail.com>
 from flask import Flask
 from flask_caching import Cache
 
+from .sender import SimulatedServer
+
+
 server = Flask(__name__)
 
 cache = Cache(server, config={
@@ -46,13 +49,28 @@ class Application:
             "test": False,
         })
 
-    def run(self, applications, host='localhost', port=8050):
+    def run(self, applications, host='localhost', port=8050, *, test=False):
         cache.clear()
 
-        for app in applications:
-            app.recv()
+        sender = None
+        try:
+            if test:
+                # start a simulated server in case of test
+                sender = SimulatedServer(self)
+                for app in applications:
+                    app_port = app.config.local.split(":")[-1]
+                    sender.generators[app_port] = app.simulated_data()
+                sender.start()
 
-        server.run(host, port)
+            # start the receivers of all the applications
+            for app in applications:
+                app.recv(test=test)
+
+            # run the development server implemented in Flask
+            server.run(host=host, port=port)
+        finally:
+            if sender is not None and sender.is_alive():
+                sender.terminate()
 
 
 application = Application()

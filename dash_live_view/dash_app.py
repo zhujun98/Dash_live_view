@@ -1,3 +1,7 @@
+"""
+Author: Jun Zhu <zhujun981661@gmail.com>
+"""
+from abc import ABC, abstractmethod
 from collections import deque
 
 import dash
@@ -6,19 +10,25 @@ from .application import application, Config, server
 from .receiver import ReceiverFactory
 
 
-class DashAppBase:
+class DashAppBase(ABC):
+    """Base class for implementing a concrete app."""
     __default_config = {
         "pathname": "",
         "update_interval": 1.0,  # page update interval (s)
         "local": "tcp://*:*",  # TCP address of the test server
         "remote": "tcp://*:*",  # TCP address of the production server
     }
-    def __init__(self, config):
 
+    def __init__(self, config):
+        """Initialization.
+
+        :param dict config: the default configuration.
+        """
         self._parent = application
-        self._config = Config()
-        self._config.update(self.__default_config)
-        self._config.update(config)
+
+        self.config = Config()
+        self.config.update(self.__default_config)
+        self.config.update(config)
 
         self._data = None
         self._queue = deque(maxlen=1)
@@ -34,7 +44,7 @@ class DashAppBase:
         # server). `url_base_pathname` will set `requests_pathname_prefix` and
         # `routes_pathname_prefix` to the same value.
 
-        url_base_pathname = self._config.pathname
+        url_base_pathname = self.config.pathname
         # url_base_pathname must end with '/'
         if not url_base_pathname:
             url_base_pathname = "/"
@@ -53,29 +63,46 @@ class DashAppBase:
         self.register_callbacks(app)
         self.set_layout(app)
 
+    @abstractmethod
     def register_callbacks(self, app):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def set_layout(self, app):
-        raise NotImplementedError
+        pass
 
-    def _update_data(self):
+    def _update(self):
+        """Update the current data.
+
+        The method tries to grab data from the pipeline queue and then
+        preprocess the data.
+        """
         try:
             data = self._queue.popleft()
-            return self.preprocess_data(data)
+            self._data = self.preprocess_data(data)
         except IndexError:
-            return None
+            pass
 
     def preprocess_data(self, orig_data):
+        """A hook for user-defined data pre-processing."""
         return orig_data
 
-    def recv(self):
-        if self._parent.config.test:
-            addr = self._config.local
+    def recv(self, test=False):
+        """Receive data from the server.
+
+        Bind to the data server and start the daemon receiver thread.
+        """
+        if test:
+            endpoint = self.config.local
         else:
-            addr = self._config.remote
+            endpoint = self.config.remote
 
         receiver = ReceiverFactory.create(self._parent.config.api,
                                           self._queue,
-                                          addr)
+                                          endpoint)
+        receiver.daemon = True
         receiver.start()
+
+    def simulated_data(self):
+        """A generator used for test."""
+        yield
