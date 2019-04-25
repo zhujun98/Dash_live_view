@@ -6,8 +6,10 @@ import re
 from setuptools import setup, find_packages
 
 
+_project_name = 'dash_live'
+
 def find_version():
-    with open(os.path.join('dash_live_view', '__init__.py')) as fp:
+    with open(os.path.join(_project_name, '__init__.py')) as fp:
         for line in fp:
             m = re.search(r'^__version__ = "(\d+\.\d+\.\d[a-z]*\d*)"', line, re.M)
             if m is not None:
@@ -16,7 +18,7 @@ def find_version():
 
 
 setup(
-    name='dash_live_view',
+    name=_project_name,
     version=find_version(),
     author='Jun Zhu',
     author_email='zhujun981661@gmail.com',
@@ -24,11 +26,13 @@ setup(
     long_description='',
     url='',
     packages=find_packages(),
+    include_package_data=True,
     entry_points={
         'console_scripts': [
         ],
     },
     package_data={
+        _project_name: ['templates/*.html']
     },
     install_requires=[
         "dash>=0.41.0",

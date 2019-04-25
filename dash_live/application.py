@@ -1,7 +1,7 @@
 """
 Author: Jun Zhu <zhujun981661@gmail.com>
 """
-from flask import Flask
+from flask import Flask, render_template, request
 from flask_caching import Cache
 
 from .sender import SimulatedServer
@@ -74,3 +74,21 @@ class Application:
 
 
 application = Application()
+
+
+@server.route('/')
+def home():
+    return render_template("home.html")
+
+
+def shutdown_server():
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
+
+
+@server.route('/shutdown', methods=['GET', 'POST'])
+def shutdown():
+    shutdown_server()
+    return 'Server shutting down...'
