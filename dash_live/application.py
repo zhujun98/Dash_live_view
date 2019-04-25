@@ -44,10 +44,17 @@ class Application:
         self.config = Config()
         self.config.update({
             "api": None,
+            "title": "app",
             "host": "localhost",
             "port": 8050,
             "test": False,
         })
+
+        self._pathnames = []  # app pathnames
+
+    @property
+    def pathnames(self):
+        return self._pathnames
 
     def run(self, applications, host='localhost', port=8050, *, test=False):
         cache.clear()
@@ -64,6 +71,7 @@ class Application:
 
             # start the receivers of all the applications
             for app in applications:
+                self._pathnames.append(app.config.pathname)
                 app.recv(test=test)
 
             # run the development server implemented in Flask
@@ -78,7 +86,15 @@ application = Application()
 
 @server.route('/')
 def home():
-    return render_template("home.html")
+    pathnames = application.pathnames
+    # TODO: replace the dirty hack
+    pathnames.extend([""]*3)
+    return render_template("home.html",
+                           title=application.config.title,
+                           pathname1=pathnames[0],
+                           pathname2=pathnames[1],
+                           pathname3=pathnames[2],
+    )
 
 
 def shutdown_server():
