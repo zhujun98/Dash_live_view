@@ -87,16 +87,11 @@ class DashAppBase(ABC):
         """A hook for user-defined data pre-processing."""
         return orig_data
 
-    def recv(self, test=False):
+    def recv(self, endpoint):
         """Receive data from the server.
 
         Bind to the data server and start the daemon receiver thread.
         """
-        if test:
-            endpoint = self.config.local
-        else:
-            endpoint = self.config.remote
-
         receiver = ReceiverFactory.create(self._parent.config.api,
                                           self._queue,
                                           endpoint)

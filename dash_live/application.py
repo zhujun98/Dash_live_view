@@ -56,13 +56,14 @@ class Application:
     def pathnames(self):
         return self._pathnames
 
-    def run(self, applications, host='localhost', port=8050, *, test=False):
+    def run(self, applications, host='localhost', port=8050, *,
+            test=False, mock=True):
         cache.clear()
 
         sender = None
         try:
-            if test:
-                # start a simulated server in case of test
+            if test and mock:
+                # start a simulated server in case of test with mocking data
                 sender = SimulatedServer(self)
                 for app in applications:
                     app_port = app.config.local.split(":")[-1]
@@ -72,7 +73,12 @@ class Application:
             # start the receivers of all the applications
             for app in applications:
                 self._pathnames.append(app.config.pathname)
-                app.recv(test=test)
+                if test:
+                    endpoint = app.config.local
+                else:
+                    endpoint = app.config.remote
+
+                app.recv(endpoint)
 
             # run the development server implemented in Flask
             server.run(host=host, port=port)
