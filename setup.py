@@ -35,9 +35,9 @@ setup(
         _project_name: ['templates/*.html']
     },
     install_requires=[
-        "dash>=0.41.0",
-        "flask>=1.0.2",
-        "flask_caching>=1.7.1"
+        "dash>=1.1.1",
+        "flask>=1.1.1",
+        "flask_caching>=1.7.2"
     ],
     extras_require={
         'docs': [
